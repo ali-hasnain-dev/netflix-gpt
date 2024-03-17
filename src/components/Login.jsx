@@ -1,10 +1,14 @@
 import React, { useRef, useState } from 'react'
 import Header from './Header'
 import { Validation } from '../utils/Validation';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from '../utils/firebase';
+import { useDispatch } from 'react-redux';
+import { addUser } from '../utils/userSlice';
+import { USER_AVATAR } from '../utils/Constanst';
 
 const Login = () => {
+    const dispatch = useDispatch();
 
     const [isSignIn, setIsSignIn] = useState(true);
     const [errorMessage, setErrorMessage] = useState(null);
@@ -21,7 +25,6 @@ const Login = () => {
         setErrorMessage(message);
 
         if (message) {
-            alert('here')
             setLoading(false);
             return
         };
@@ -32,14 +35,24 @@ const Login = () => {
                 .then((userCredential) => {
                     // Signed up 
                     const user = userCredential.user;
-                    console.log(user);
+
+                    updateProfile(user, {
+                        displayName: name.current.value, photoURL: USER_AVATAR
+                    }).then(() => {
+                        const { uid, email, displayName, photoURL } = auth.currentUser;
+                        dispatch(addUser({ uid: uid, email: email, displayName: displayName, photoURL: photoURL }));
+                    }).catch((error) => {
+                        setErrorMessage(error.message);
+                    });
+
+
                 })
                 .catch((error) => {
                     const errorCode = error.code;
                     const errorMessage = error.message;
                     if (errorCode === 'auth/invalid-credential ') {
                         setErrorMessage('Invalid email or password');
-                    } else if (errorCode == 'auth/email-already-in-use') {
+                    } else if (errorCode === 'auth/email-already-in-use') {
                         setErrorMessage('Email already in use');
                     } else {
                         setErrorMessage(errorCode + " - " + errorMessage);
@@ -53,7 +66,6 @@ const Login = () => {
                 .then((userCredential) => {
                     // Signed in 
                     const user = userCredential.user;
-                    console.log(user);
                 })
                 .catch((error) => {
                     const errorCode = error.code;
